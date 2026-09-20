@@ -1,0 +1,10 @@
+{
+  "name": "uma-tailors",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Uma Tailors website with server-side hashed admin password and password-change file.",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "express": "^4.21.2" }
+}
