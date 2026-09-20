@@ -106,6 +106,9 @@
 .main-nav a{color:#4b3940;font-weight:700;padding:10px 2px;position:relative}
 .main-nav a:hover{color:#d4145a}
 .header-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.instagram-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #efd5df;background:#fff;color:#7c1642;border-radius:999px;padding:7px 11px;font-weight:800;white-space:nowrap}
+.instagram-btn img{width:32px;height:32px;max-width:32px;max-height:32px;object-fit:contain;display:block}
+
 .call-menu,.whatsapp-menu{position:relative;display:inline-block}
 .call-options{display:none;position:absolute;top:calc(100% + 8px);right:0;z-index:300;min-width:210px;padding:8px;background:#fff;border:1px solid #efd5df;border-radius:16px;box-shadow:0 15px 40px rgba(50,20,35,.16)}
 .call-options.show{display:flex;flex-direction:column;gap:5px}
@@ -113,5 +116,5 @@
 .call-option:hover{background:#f3fff3}
 .call-option img{width:30px;height:30px;object-fit:contain}
 .whatsapp-menu .call-options{min-width:220px}
-@media(max-width:1000px){.header-inner{padding:8px 4%}.main-nav{gap:14px}.header-actions .icon-btn span{display:none}}
+@media(max-width:1000px){.header-inner{padding:8px 4%}.main-nav{gap:14px}.header-actions .icon-btn span,.instagram-btn span{display:none}.instagram-btn{padding:7px}.instagram-btn img{width:32px;height:32px}}
 @media(max-width:700px){.header-inner{gap:8px}.brand span{font-size:17px}.brand img{width:44px;height:44px}.main-nav{order:3;width:100%;flex-basis:100%;justify-content:flex-start}.site-header .header-inner{flex-wrap:wrap}.header-actions{margin-left:auto}.main-nav a{font-size:14px}}
