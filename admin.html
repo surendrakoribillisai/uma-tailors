@@ -9,7 +9,13 @@
 <style>
 #loginScreen{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#fff3f7,#f7f4f6);display:flex;align-items:center;justify-content:center;padding:20px}#loginScreen.hidden{display:none}.login-card{width:min(430px,100%);background:#fff;border:1px solid #eadde2;border-radius:24px;padding:30px;box-shadow:0 20px 70px #3214231c}.login-logo{width:90px;height:90px;object-fit:contain;display:block;margin:0 auto 10px}.login-card h1{text-align:center;margin:0}.login-card p{text-align:center;color:#776971}.login-card label{display:grid;gap:7px;font-weight:700;margin-top:15px}.login-card input{padding:13px;border:1px solid #ddd;border-radius:10px;font:inherit}.login-card button{width:100%;margin-top:15px;padding:13px;border:0;border-radius:10px;background:#d4145a;color:#fff;font-weight:800;cursor:pointer}login-error{color:#c62828!important;font-weight:700;min-height:24px}.logout-btn{position:absolute;right:20px;top:20px;background:#fff;color:#c62828;border:1px solid #c62828;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer}
 </style></head>
-<body><div id="loginScreen"><div class="login-card"><img class="login-logo" src="assets/uma-tailors-logo.png" alt="Uma Tailors"><h1>Admin Login</h1><p>Enter an authorized mobile number and password.</p><div id="loginError" class="login-error"></div><label>Admin mobile number<input id="adminPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"></label><label>Password<input id="adminPassword" type="password" autocomplete="current-password" placeholder="Enter password"></label><button type="button" onclick="adminLogin()">Login</button></div></div><button id="logoutBtn" class="logout-btn" onclick="adminLogout()">Logout</button>
+<body>
+<div id="loginScreen" style="max-width:420px;margin:40px auto;padding:24px;background:#fff;border-radius:16px">
+<h2>Admin Login</h2>
+<label>Authorized mobile <input id="adminMobile" type="tel" placeholder="Enter mobile number"></label>
+<label>Password <input id="adminPassword" type="password" placeholder="Enter password"></label>
+<button type="button" onclick="adminLogin()">Login</button>
+<p id="loginError"></p></div><div id="loginScreen"><div class="login-card"><img class="login-logo" src="assets/uma-tailors-logo.png" alt="Uma Tailors"><h1>Admin Login</h1><p>Enter an authorized mobile number and password.</p><div id="loginError" class="login-error"></div><label>Admin mobile number<input id="adminPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"></label><label>Password<input id="adminPassword" type="password" autocomplete="current-password" placeholder="Enter password"></label><button type="button" onclick="adminLogin()">Login</button></div></div><button id="logoutBtn" class="logout-btn" onclick="adminLogout()">Logout</button>
 <div class="layout">
 <aside class="sidebar">
   <div class="admin-brand"><img src="assets/uma-tailors-logo.png"><b>Uma Tailors</b><small>Admin Panel</small></div>
@@ -91,45 +97,29 @@
 </div>
 
 <script>
-const PK="uma_tailors_products_v1", OK="uma_tailors_orders_v1", SK="uma_tailors_settings_v1";
-const getP=()=>JSON.parse(localStorage.getItem(PK)||"[]");
-const getO=()=>JSON.parse(localStorage.getItem(OK)||"[]");
-const setP=x=>localStorage.setItem(PK,JSON.stringify(x));
-const setO=x=>localStorage.setItem(OK,JSON.stringify(x));
-function money(n){return "₹"+Number(n||0).toLocaleString("en-IN")}
-function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
-document.querySelectorAll(".nav-btn").forEach(btn=>btn.onclick=()=>showTab(btn.dataset.tab));
-function showTab(id){
- document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
- document.querySelectorAll(".nav-btn").forEach(x=>x.classList.remove("active"));
- document.getElementById(id).classList.add("active");
- document.querySelector(`[data-tab="${id}"]`).classList.add("active");
- renderAll();
+const AUTH_NUMBERS = ['7659951392','6304305587','8008597539'];
+const PASSWORD_HASH = '19effc30273f29040a6628de0125938ac4c5a4cdd92eeecef43b8df9c2fbea87';
+
+async function sha256(text){
+  const data = new TextEncoder().encode(text);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
-function renderAll(){
- const p=getP(), o=getO();
- statProducts.textContent=p.filter(x=>x.published).length;
- statOrders.textContent=o.length;
- statNew.textContent=o.filter(x=>x.status==="New").length;
- statValue.textContent=money(o.reduce((s,x)=>s+x.price*x.quantity,0));
- productsTable.innerHTML=p.map(x=>`<tr><td><b>${esc(x.name)}</b></td><td>${esc(x.category)}</td><td>${money(x.price)}</td><td><span class="status ${x.published?'published':'draft'}">${x.published?'Published':'Draft'}</span></td><td><button class="link" onclick="editProduct('${x.id}')">Edit</button> <button class="link red" onclick="deleteProduct('${x.id}')">Delete</button></td></tr>`).join("")||`<tr><td colspan="5" class="empty">No products.</td></tr>`;
- ordersTable.innerHTML=o.map(x=>`<tr><td><b>${esc(x.id)}</b><small>${new Date(x.createdAt).toLocaleString()}</small></td><td>${esc(x.name)}<small>${esc(x.phone)}<br>${esc(x.address)}</small></td><td>${esc(x.product)}</td><td>${x.quantity}</td><td>${money(x.price*x.quantity)}</td><td><select onchange="updateOrder('${x.id}',this.value)"><option ${x.status==="New"?"selected":""}>New</option><option ${x.status==="Confirmed"?"selected":""}>Confirmed</option><option ${x.status==="Ready"?"selected":""}>Ready</option><option ${x.status==="Completed"?"selected":""}>Completed</option><option ${x.status==="Cancelled"?"selected":""}>Cancelled</option></select></td><td><button class="link red" onclick="deleteOrder('${x.id}')">Delete</button></td></tr>`).join("")||`<tr><td colspan="7" class="empty">No orders yet.</td></tr>`;
- recentOrders.innerHTML=o.slice(0,5).map(x=>`<div class="recent"><b>${esc(x.id)}</b><span>${esc(x.name)} · ${esc(x.product)}</span><strong>${money(x.price*x.quantity)}</strong></div>`).join("")||`<p class="empty">No orders yet.</p>`;
+async function adminLogin(){
+  const mobile = (document.getElementById('adminMobile')?.value || '').replace(/\D/g,'');
+  const password = document.getElementById('adminPassword')?.value || '';
+  const err = document.getElementById('loginError');
+  if(!AUTH_NUMBERS.includes(mobile)){ if(err) err.textContent='This mobile number is not authorized.'; return; }
+  if(await sha256(password) !== PASSWORD_HASH){ if(err) err.textContent='Incorrect password.'; return; }
+  localStorage.setItem('uma_admin_auth','1'); showDashboard();
 }
-function openProductForm(id=null){
- productModal.hidden=false;
- if(id){const x=getP().find(a=>a.id===id);formTitle.textContent="Edit product";productId.value=x.id;productName.value=x.name;productCategory.value=x.category;productPrice.value=x.price;productDescription.value=x.description;productImage.value=x.image||"";productPublished.checked=x.published;}
- else{formTitle.textContent="Add product";productForm.reset();productId.value="";productPublished.checked=true;}
+function logout(){ localStorage.removeItem('uma_admin_auth'); location.reload(); }
+function showDashboard(){
+  const login=document.getElementById('loginScreen'), dash=document.getElementById('dashboard');
+  if(login) login.hidden=true; if(dash) dash.hidden=false;
 }
-function closeProductForm(){productModal.hidden=true}
-productForm.onsubmit=e=>{e.preventDefault();let p=getP();const id=productId.value||"P-"+Date.now();const item={id,name:productName.value.trim(),category:productCategory.value.trim(),price:Number(productPrice.value),description:productDescription.value.trim(),image:productImage.value.trim(),published:productPublished.checked};const i=p.findIndex(x=>x.id===id);if(i>=0)p[i]=item;else p.unshift(item);setP(p);closeProductForm();renderAll();};
-function editProduct(id){openProductForm(id)}
-function deleteProduct(id){if(confirm("Delete this product?")){setP(getP().filter(x=>x.id!==id));renderAll();}}
-function updateOrder(id,status){let o=getO();const x=o.find(a=>a.id===id);if(x)x.status=status;setO(o);renderAll();}
-function deleteOrder(id){if(confirm("Delete this order?")){setO(getO().filter(x=>x.id!==id));renderAll();}}
-function clearOrders(){if(confirm("Delete ALL orders?")){setO([]);renderAll();}}
-function saveSettings(){localStorage.setItem(SK,JSON.stringify({name:setName.value,phone:setPhone.value,whatsapp:setWhatsApp.value,address:setAddress.value}));settingsSaved.textContent="Saved.";setTimeout(()=>settingsSaved.textContent="",1800);}
-renderAll();
+function initAuth(){ if(localStorage.getItem('uma_admin_auth')==='1') showDashboard(); }
+initAuth();
 </script>
 <script>
 let adminSession = sessionStorage.getItem('uma_tailors_admin_session') || '';
