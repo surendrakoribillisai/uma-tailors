@@ -7,15 +7,25 @@
 <link rel="stylesheet" href="admin.css">
 
 <style>
-#loginScreen{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#fff3f7,#f7f4f6);display:flex;align-items:center;justify-content:center;padding:20px}#loginScreen.hidden{display:none}.login-card{width:min(430px,100%);background:#fff;border:1px solid #eadde2;border-radius:24px;padding:30px;box-shadow:0 20px 70px #3214231c}.login-logo{width:90px;height:90px;object-fit:contain;display:block;margin:0 auto 10px}.login-card h1{text-align:center;margin:0}.login-card p{text-align:center;color:#776971}.login-card label{display:grid;gap:7px;font-weight:700;margin-top:15px}.login-card input{padding:13px;border:1px solid #ddd;border-radius:10px;font:inherit}.login-card button{width:100%;margin-top:15px;padding:13px;border:0;border-radius:10px;background:#d4145a;color:#fff;font-weight:800;cursor:pointer}login-error{color:#c62828!important;font-weight:700;min-height:24px}.logout-btn{position:absolute;right:20px;top:20px;background:#fff;color:#c62828;border:1px solid #c62828;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer}
+#loginScreen{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#fff3f7,#f7f4f6);display:flex;align-items:center;justify-content:center;padding:20px}#loginScreen.hidden{display:none}.login-card{width:min(430px,100%);background:#fff;border:1px solid #eadde2;border-radius:24px;padding:30px;box-shadow:0 20px 70px #3214231c}.login-logo{width:90px;height:90px;object-fit:contain;display:block;margin:0 auto 10px}.login-card h1{text-align:center;margin:0}.login-card p{text-align:center;color:#776971}.login-card label{display:grid;gap:7px;font-weight:700;margin-top:15px}.login-card input{padding:13px;border:1px solid #ddd;border-radius:10px;font:inherit}.login-card button{width:100%;margin-top:15px;padding:13px;border:0;border-radius:10px;background:#d4145a;color:#fff;font-weight:800;cursor:pointer}.login-error{color:#c62828!important;font-weight:700;min-height:24px}.logout-btn{position:absolute;right:20px;top:20px;background:#fff;color:#c62828;border:1px solid #c62828;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer}
 </style></head>
 <body>
-<div id="loginScreen" style="max-width:420px;margin:40px auto;padding:24px;background:#fff;border-radius:16px">
-<h2>Admin Login</h2>
-<label>Authorized mobile <input id="adminMobile" type="tel" placeholder="Enter mobile number"></label>
-<label>Password <input id="adminPassword" type="password" placeholder="Enter password"></label>
-<button type="button" onclick="adminLogin()">Login</button>
-<p id="loginError"></p></div><div id="loginScreen"><div class="login-card"><img class="login-logo" src="assets/uma-tailors-logo.png" alt="Uma Tailors"><h1>Admin Login</h1><p>Enter an authorized mobile number and password.</p><div id="loginError" class="login-error"></div><label>Admin mobile number<input id="adminPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"></label><label>Password<input id="adminPassword" type="password" autocomplete="current-password" placeholder="Enter password"></label><button type="button" onclick="adminLogin()">Login</button></div></div><button id="logoutBtn" class="logout-btn" onclick="adminLogout()">Logout</button>
+<div id="loginScreen">
+  <div class="login-card">
+    <img class="login-logo" src="assets/uma-tailors-logo.png" alt="Uma Tailors">
+    <h1>Admin Login</h1>
+    <p>Enter an authorized mobile number and password.</p>
+    <div id="loginError" class="login-error" aria-live="polite"></div>
+    <label>Admin mobile number
+      <input id="adminPhone" inputmode="numeric" maxlength="10" autocomplete="tel" placeholder="10-digit mobile number">
+    </label>
+    <label>Password
+      <input id="adminPassword" type="password" autocomplete="current-password" placeholder="Enter password">
+    </label>
+    <button type="button" onclick="adminLogin()">Login</button>
+  </div>
+</div>
+<button id="logoutBtn" class="logout-btn" onclick="adminLogout()" style="display:none">Logout</button>
 <div class="layout">
 <aside class="sidebar">
   <div class="admin-brand"><img src="assets/uma-tailors-logo.png"><b>Uma Tailors</b><small>Admin Panel</small></div>
@@ -98,92 +108,81 @@
 
 <script>
 const AUTH_NUMBERS = ['7659951392','6304305587','8008597539'];
-const PASSWORD_HASH = '19effc30273f29040a6628de0125938ac4c5a4cdd92eeecef43b8df9c2fbea87';
+const DEFAULT_PASSWORD_HASH = '19effc30273f29040a6628de0125938ac4c5a4cdd92eeecef43b8df9c2fbea87';
+const PASSWORD_KEY = 'uma_admin_password_hash_v1';
+const AUTH_KEY = 'uma_admin_auth';
 
 async function sha256(text){
   const data = new TextEncoder().encode(text);
   const hash = await crypto.subtle.digest('SHA-256', data);
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
+function getPasswordHash(){
+  return localStorage.getItem(PASSWORD_KEY) || DEFAULT_PASSWORD_HASH;
+}
+function showAdmin(){
+  const login = document.getElementById('loginScreen');
+  const logout = document.getElementById('logoutBtn');
+  if(login) login.classList.add('hidden');
+  if(logout) logout.style.display = 'block';
+}
 async function adminLogin(){
-  const mobile = (document.getElementById('adminMobile')?.value || '').replace(/\D/g,'');
+  const phone = (document.getElementById('adminPhone')?.value || '').replace(/\D/g,'');
   const password = document.getElementById('adminPassword')?.value || '';
   const err = document.getElementById('loginError');
-  if(!AUTH_NUMBERS.includes(mobile)){ if(err) err.textContent='This mobile number is not authorized.'; return; }
-  if(await sha256(password) !== PASSWORD_HASH){ if(err) err.textContent='Incorrect password.'; return; }
-  localStorage.setItem('uma_admin_auth','1'); showDashboard();
-}
-function logout(){ localStorage.removeItem('uma_admin_auth'); location.reload(); }
-function showDashboard(){
-  const login=document.getElementById('loginScreen'), dash=document.getElementById('dashboard');
-  if(login) login.hidden=true; if(dash) dash.hidden=false;
-}
-function initAuth(){ if(localStorage.getItem('uma_admin_auth')==='1') showDashboard(); }
-initAuth();
-</script>
-<script>
-let adminSession = sessionStorage.getItem('uma_tailors_admin_session') || '';
-
-async function adminLogin(){
-  const phone=document.getElementById('adminPhone').value.replace(/\D/g,'');
-  const password=document.getElementById('adminPassword').value;
-  const err=document.getElementById('loginError');
-  err.textContent='';
-  if(!['7659951392','6304305587','8008597539'].includes(phone)){err.textContent='This mobile number is not authorized.';return}
+  if(err) err.textContent = '';
+  if(!AUTH_NUMBERS.includes(phone)){
+    if(err) err.textContent = 'This mobile number is not authorized.';
+    return;
+  }
   try {
-    const response=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,password})});
-    const data=await response.json();
-    if(!response.ok) throw new Error(data.error || 'Login failed.');
-    adminSession=data.token;
-    sessionStorage.setItem('uma_tailors_admin_session',adminSession);
-    sessionStorage.setItem('uma_tailors_admin_phone',phone);
+    const hash = await sha256(password);
+    if(hash !== getPasswordHash()){
+      if(err) err.textContent = 'Incorrect password.';
+      return;
+    }
+    localStorage.setItem(AUTH_KEY, '1');
+    localStorage.setItem('uma_admin_phone', phone);
     showAdmin();
-  } catch(error) { err.textContent=error.message; }
+    if(typeof renderDashboard === 'function') renderDashboard();
+  } catch(e) {
+    if(err) err.textContent = 'Login could not be completed. Please try again.';
+  }
 }
-
-function showAdmin(){document.getElementById('loginScreen').classList.add('hidden');document.getElementById('logoutBtn').style.display='block'}
-
-async function adminLogout(){
-  if(adminSession){try{await fetch('/api/admin/logout',{method:'POST',headers:{'x-admin-session':adminSession}})}catch(e){}}
-  sessionStorage.removeItem('uma_tailors_admin_session');
-  sessionStorage.removeItem('uma_tailors_admin_phone');
+function adminLogout(){
+  localStorage.removeItem(AUTH_KEY);
+  localStorage.removeItem('uma_admin_phone');
   location.reload();
 }
-
 async function changeAdminPassword(){
-  const status=document.getElementById('passwordSaved');
-  status.textContent='';
-  const currentPassword=document.getElementById('currentPassword').value;
-  const currentHashCode=document.getElementById('currentHashCode').value.trim();
-  const newPassword=document.getElementById('newPassword').value;
-  const confirmPassword=document.getElementById('confirmPassword').value;
-  try {
-    const response=await fetch('/api/admin/change-password',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-admin-session':adminSession},
-      body:JSON.stringify({currentPassword,currentHashCode,newPassword,confirmPassword})
-    });
-    const data=await response.json();
-    if(!response.ok) throw new Error(data.error || 'Password change failed.');
-    status.textContent=data.message;
-    document.getElementById('currentPassword').value='';
-    document.getElementById('currentHashCode').value='';
-    document.getElementById('newPassword').value='';
-    document.getElementById('confirmPassword').value='';
-  } catch(error) { status.textContent=error.message; }
+  const status = document.getElementById('passwordSaved');
+  const currentPassword = document.getElementById('currentPassword')?.value || '';
+  const currentHashCode = (document.getElementById('currentHashCode')?.value || '').trim().toLowerCase();
+  const newPassword = document.getElementById('newPassword')?.value || '';
+  const confirmPassword = document.getElementById('confirmPassword')?.value || '';
+  if(status) status.textContent = '';
+  if(await sha256(currentPassword) !== getPasswordHash()){
+    if(status) status.textContent = 'Original password is incorrect.';
+    return;
+  }
+  if(currentHashCode && currentHashCode !== getPasswordHash()){
+    if(status) status.textContent = 'Current hash code is incorrect.';
+    return;
+  }
+  if(!newPassword || newPassword !== confirmPassword){
+    if(status) status.textContent = 'New password and confirmation must match.';
+    return;
+  }
+  localStorage.setItem(PASSWORD_KEY, await sha256(newPassword));
+  if(status) status.textContent = 'Password changed for this browser.';
+  ['currentPassword','currentHashCode','newPassword','confirmPassword'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
 }
-
-(async function(){
-  if(adminSession){
-    try {
-      const r=await fetch('/api/health');
-      if(r.ok) showAdmin(); else throw new Error();
-    } catch(e) {
-      sessionStorage.removeItem('uma_tailors_admin_session');
-      adminSession='';
-      document.getElementById('logoutBtn').style.display='none';
-    }
-  } else document.getElementById('logoutBtn').style.display='none';
+(function initAuth(){
+  if(localStorage.getItem(AUTH_KEY) === '1') showAdmin();
+  else {
+    const logout = document.getElementById('logoutBtn');
+    if(logout) logout.style.display = 'none';
+  }
 })();
-</script></body>
+</script>
 </html>
