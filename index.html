@@ -12,6 +12,27 @@
     >
 
     <link rel="stylesheet" href="style.css">
+
+<style>
+/* Added functionality — existing site design is preserved */
+.product-tools{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 24px}
+.product-tools input,.product-tools select,.custom-form input,.custom-form textarea{font:inherit;border:1px solid #ead7df;border-radius:12px;padding:11px 13px;background:#fff;color:#333;box-sizing:border-box}
+.product-tools input{flex:1;min-width:190px}.product-tools select{min-width:160px}
+.product-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.primary-btn.small,.secondary-btn.small{padding:9px 13px}
+.rating-line{margin:7px 0;color:#9a5b73;font-weight:700}
+.review-list{margin-top:16px;display:grid;gap:10px}
+.review-item{padding:12px;border:1px solid #efdfe5;border-radius:12px;background:#fff}
+.review-item b{display:block}.review-stars{letter-spacing:1px}
+.modal-card.wide{max-width:620px}
+.custom-choice{display:grid;gap:10px;margin-top:16px}
+.custom-form{display:grid;gap:10px;margin-top:16px}
+.custom-form textarea{min-height:90px;resize:vertical}
+.product-detail{display:grid;gap:10px}
+.detail-image{width:100%;max-height:420px;object-fit:contain;border-radius:14px;background:#faf7f8}
+@media(min-width:760px){.product-detail{grid-template-columns:1fr 1fr}}
+</style>
+
 </head>
 
 <body>
@@ -847,6 +868,106 @@
         );
 
     </script>
+
+
+<script>
+(function(){
+  const PRODUCT_KEY='uma_tailors_products_v1';
+  const ORDER_KEY='uma_tailors_orders_v1';
+  const REVIEW_KEY='uma_tailors_reviews_v1';
+  const CUSTOM_KEY='uma_tailors_customization_v1';
+
+  function products(){ try{return JSON.parse(localStorage.getItem(PRODUCT_KEY)||'[]')}catch(e){return[]} }
+  function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
+  function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function reviews(){try{return JSON.parse(localStorage.getItem(REVIEW_KEY)||'[]')}catch(e){return[]}}
+  function avg(id){const r=reviews().filter(x=>x.productId===id);return r.length?(r.reduce((a,b)=>a+Number(b.rating||0),0)/r.length).toFixed(1):'0.0'}
+  function stars(n){return '★'.repeat(Math.max(0,Math.min(5,Number(n)||0)))+'☆'.repeat(5-Math.max(0,Math.min(5,Number(n)||0)));}
+
+  function addTools(){
+    const section=[...document.querySelectorAll('section')].find(s=>/products/i.test(s.textContent||''));
+    if(!section || section.querySelector('.product-tools')) return;
+    const host=section.querySelector('.section-inner')||section;
+    const tools=document.createElement('div');
+    tools.className='product-tools';
+    tools.innerHTML='<input id="productSearch" type="search" placeholder="Search products..."><select id="categoryFilter"><option value="">All categories</option></select><select id="subcategoryFilter"><option value="">All subcategories</option></select>';
+    const first=host.querySelector('.products-grid,.product-grid,.products');
+    host.insertBefore(tools,first||host.firstChild);
+    const ps=tools.querySelector('#productSearch'), cf=tools.querySelector('#categoryFilter'), sf=tools.querySelector('#subcategoryFilter');
+    const renderFilters=()=>{
+      const list=products(), cats=[...new Set(list.map(p=>p.category).filter(Boolean))].sort();
+      cf.innerHTML='<option value="">All categories</option>'+cats.map(x=>'<option>'+esc(x)+'</option>').join('');
+      const subs=[...new Set(list.filter(p=>!cf.value||p.category===cf.value).map(p=>p.subcategory).filter(Boolean))].sort();
+      sf.innerHTML='<option value="">All subcategories</option>'+subs.map(x=>'<option>'+esc(x)+'</option>').join('');
+    };
+    const filter=()=>{
+      const q=(ps.value||'').toLowerCase(), c=cf.value, s=sf.value;
+      document.querySelectorAll('.product-card').forEach(card=>{
+        const text=(card.textContent||'').toLowerCase();
+        const p=products().find(x=>x.id===card.dataset.productId);
+        const ok=text.includes(q)&&(!c||!p||p.category===c)&&(!s||!p||p.subcategory===s);
+        card.style.display=ok?'':'none';
+      });
+    };
+    [ps,cf,sf].forEach(x=>x.addEventListener('input',()=>{if(x===cf){renderFilters()}filter()}));
+    renderFilters();
+  }
+
+  function enhanceCards(){
+    document.querySelectorAll('.product-card').forEach(card=>{
+      if(card.dataset.enhanced) return;
+      card.dataset.enhanced='1';
+      const btns=card.querySelector('.product-actions')||card.querySelector('.card-actions');
+      if(btns){
+        const v=document.createElement('button'); v.type='button'; v.className='secondary-btn small'; v.textContent='View Product';
+        v.onclick=()=>openDetail(card.dataset.productId);
+        btns.prepend(v);
+      }
+    });
+  }
+
+  window.openDetail=function(id){
+    const p=products().find(x=>x.id===id); if(!p)return;
+    const existing=document.getElementById('productDetailModal'); if(existing)existing.remove();
+    const modal=document.createElement('div'); modal.id='productDetailModal'; modal.className='modal';
+    const rs=reviews().filter(x=>x.productId===id);
+    modal.innerHTML='<div class="modal-card wide"><button class="modal-close" onclick="this.closest(\'.modal\').remove()">×</button><div class="product-detail">'
+      +(p.image?'<img class="detail-image" src="'+esc(p.image)+'" alt="'+esc(p.name)+'">':'')
+      +'<div><h2>'+esc(p.name)+'</h2><p><strong>₹'+esc(p.price)+'</strong></p><p>'+esc(p.category||'')+(p.subcategory?' · '+esc(p.subcategory):'')+'</p><p>'+esc(p.description||'')+'</p>'
+      +'<div class="rating-line">'+stars(Math.round(Number(avg(id))))+' '+avg(id)+' ('+rs.length+' reviews)</div>'
+      +'<div class="product-actions"><button class="primary-btn small" onclick="document.getElementById(\'productDetailModal\').remove();window.openOrderModal&&window.openOrderModal(\''+String(id).replace(/'/g,"\\'")+'\')">Order</button><button class="secondary-btn small" onclick="document.getElementById(\'productDetailModal\').remove();openCustomize(\''+String(id).replace(/'/g,"\\'")+'\')">Customize</button></div>'
+      +'<h3>Reviews</h3><div class="review-list">'+(rs.length?rs.map(r=>'<div class="review-item"><b>'+esc(r.name||'Customer')+'</b><span class="review-stars">'+stars(r.rating)+'</span><div>'+esc(r.text||'')+'</div></div>').join(''):'<p>No reviews yet.</p>')+'</div>'
+      +'<form class="custom-form" onsubmit="submitReview(event,\''+String(id).replace(/'/g,"\\'")+'\')"><h3>Write a review</h3><input name="name" placeholder="Your name" required><select name="rating" required><option value="">Rating</option><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select><textarea name="text" placeholder="Your review" required></textarea><button class="primary-btn" type="submit">Submit Review</button></form>'
+      +'</div></div>';
+    document.body.appendChild(modal);
+  };
+
+  window.submitReview=function(e,id){
+    e.preventDefault(); const f=e.target, r=reviews();
+    r.push({id:'REV-'+Date.now(),productId:id,name:f.name.value.trim(),rating:Number(f.rating.value),text:f.text.value.trim(),createdAt:new Date().toISOString()});
+    save(REVIEW_KEY,r); alert('Thank you for your review.'); openDetail(id);
+  };
+
+  window.openCustomize=function(id){
+    const p=products().find(x=>x.id===id); if(!p)return;
+    const existing=document.getElementById('customizeModal'); if(existing)existing.remove();
+    const modal=document.createElement('div'); modal.id='customizeModal'; modal.className='modal';
+    const msg=encodeURIComponent('Hello Uma Tailors, I want to customize the product "'+p.name+'". Please contact me.');
+    modal.innerHTML='<div class="modal-card wide"><button class="modal-close" onclick="this.closest(\'.modal\').remove()">×</button><h2>Customize '+esc(p.name)+'</h2><div class="custom-choice"><button class="primary-btn" onclick="document.getElementById(\'customForm\').style.display=\'grid\'">Fill Customization Details</button><a class="secondary-btn" target="_blank" href="https://wa.me/917659951392?text='+msg+'">💬 Contact Admin on WhatsApp</a><a class="secondary-btn" href="tel:06304305587">📞 Call Admin</a></div><form id="customForm" class="custom-form" style="display:none" onsubmit="submitCustomization(event,\''+String(id).replace(/'/g,"\\'")+'\')"><input name="name" placeholder="Your name" required><input name="phone" placeholder="Phone number" required><input name="measurements" placeholder="Measurements / size details"><input name="color" placeholder="Color"><input name="fabric" placeholder="Fabric"><textarea name="design" placeholder="Design requirements"></textarea><textarea name="instructions" placeholder="Special instructions"></textarea><input name="referenceImage" type="url" placeholder="Reference image link"><button class="primary-btn" type="submit">Send Customization Request</button></form></div>';
+    document.body.appendChild(modal);
+  };
+
+  window.submitCustomization=function(e,id){
+    e.preventDefault(); const p=products().find(x=>x.id===id), f=e.target, a=[];
+    a.push({id:'CUS-'+Date.now(),productId:id,product:p?.name||'',name:f.name.value.trim(),phone:f.phone.value.trim(),measurements:f.measurements.value.trim(),color:f.color.value.trim(),fabric:f.fabric.value.trim(),design:f.design.value.trim(),instructions:f.instructions.value.trim(),referenceImage:f.referenceImage.value.trim(),status:'New',createdAt:new Date().toISOString()});
+    const old=(()=>{try{return JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]')}catch(e){return[]}})(); save(CUSTOM_KEY,old.concat(a));
+    alert('Customization request sent to admin.'); document.getElementById('customizeModal')?.remove();
+  };
+
+  const observer=new MutationObserver(()=>{addTools();enhanceCards()});
+  document.addEventListener('DOMContentLoaded',()=>{addTools();enhanceCards(); const root=document.querySelector('main')||document.body; observer.observe(root,{childList:true,subtree:true});});
+})();
+</script>
 
 </body>
 </html>

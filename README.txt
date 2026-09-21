@@ -1,14 +1,13 @@
-Uma Tailors - GitHub Pages Admin
+Uma Tailors - updated package
+Customer website: index.html
+Original stylesheet: style.css
+Assets: assets/
+Admin page: admin.html
 
-Authorized mobile numbers:
-7659951392
-8008597539
-6304305587
+The customer website keeps the existing design and adds product search,
+category/subcategory filters, product details, reviews/ratings, and
+customization with WhatsApp/call contact plus a customization form.
 
-Password: 180227
-SHA-256 hash is stored in sai-2007 and used by admin.html.
-
-Tabs:
-Dashboard, Products, Orders, Website settings.
-
-This is a static GitHub Pages admin. Data is stored in browser localStorage and authentication is client-side.
+Note: this package uses the existing browser localStorage architecture.
+For cross-device shared orders/reviews/customization requests, a shared
+backend is required.

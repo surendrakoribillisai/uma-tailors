@@ -9,21 +9,7 @@
 <style>
 #loginScreen{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#fff3f7,#f7f4f6);display:flex;align-items:center;justify-content:center;padding:20px}#loginScreen.hidden{display:none}.login-card{width:min(430px,100%);background:#fff;border:1px solid #eadde2;border-radius:24px;padding:30px;box-shadow:0 20px 70px #3214231c}.login-logo{width:90px;height:90px;object-fit:contain;display:block;margin:0 auto 10px}.login-card h1{text-align:center;margin:0}.login-card p{text-align:center;color:#776971}.login-card label{display:grid;gap:7px;font-weight:700;margin-top:15px}.login-card input{padding:13px;border:1px solid #ddd;border-radius:10px;font:inherit}.login-card button{width:100%;margin-top:15px;padding:13px;border:0;border-radius:10px;background:#d4145a;color:#fff;font-weight:800;cursor:pointer}.otp-box{display:none}.otp-box.show{display:block}.demo-otp{margin-top:12px;padding:10px;background:#fff3f7;border-radius:10px;color:#a30e46;font-weight:800;text-align:center}.login-error{color:#c62828!important;font-weight:700;min-height:24px}.logout-btn{position:absolute;right:20px;top:20px;background:#fff;color:#c62828;border:1px solid #c62828;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer}
 </style></head>
-<body><div id="loginScreen">
-  <div class="login-card">
-    <img class="login-logo" src="assets/uma-tailors-logo.png" alt="Uma Tailors">
-    <h1>Admin Login</h1>
-    <p>Authorized staff only</p>
-    <div id="loginError" class="login-error"></div>
-    <label>Admin mobile number
-      <input id="adminPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="username">
-    </label>
-    <label>Password
-      <input id="adminPassword" type="password" placeholder="Enter password" autocomplete="current-password">
-    </label>
-    <button type="button" onclick="adminLogin()">Login</button>
-  </div>
-</div><button id="logoutBtn" class="logout-btn" onclick="adminLogout()">Logout</button>
+<body><div id="loginScreen"><div class="login-card"><img class="login-logo" src="assets/uma-tailors-logo.png" alt="Uma Tailors"><h1>Admin Login</h1><p>Enter an authorized mobile number to receive a new OTP.</p><div id="loginError" class="login-error"></div><div id="phoneBox"><label>Admin mobile number<input id="adminPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"></label><button type="button" onclick="generateOTP()">Generate OTP</button></div><div id="otpBox" class="otp-box"><label>OTP<input id="adminOtp" inputmode="numeric" maxlength="6" placeholder="6-digit OTP"></label><div id="demoOtp" class="demo-otp"></div><button type="button" onclick="verifyOTP()">Verify & Login</button><button type="button" onclick="generateOTP()" style="background:#fff;color:#d4145a;border:1px solid #d4145a">Generate New OTP</button></div></div></div><button id="logoutBtn" class="logout-btn" onclick="adminLogout()">Logout</button>
 <div class="layout">
 <aside class="sidebar">
   <div class="admin-brand"><img src="assets/uma-tailors-logo.png"><b>Uma Tailors</b><small>Admin Panel</small></div>
@@ -135,54 +121,10 @@ function saveSettings(){localStorage.setItem(SK,JSON.stringify({name:setName.val
 renderAll();
 </script>
 <script>
-const AUTH_NUMBERS=['7659951392','8008597539','6304305587'];
-const PASSWORD_HASH='19effc30273f29040a6628de0125938ac4c5a4cdd92eeecef43b8df9c2fbea87';
-
-async function sha256(text){
-  const data=new TextEncoder().encode(text);
-  const hash=await crypto.subtle.digest('SHA-256',data);
-  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-async function adminLogin(){
-  const phone=document.getElementById('adminPhone').value.replace(/\D/g,'');
-  const password=document.getElementById('adminPassword').value;
-  const err=document.getElementById('loginError');
-  err.textContent='';
-
-  if(!AUTH_NUMBERS.includes(phone)){
-    err.textContent='This mobile number is not authorized.';
-    return;
-  }
-  if(!password){
-    err.textContent='Please enter the password.';
-    return;
-  }
-  if(await sha256(password)!==PASSWORD_HASH){
-    err.textContent='Incorrect password.';
-    return;
-  }
-
-  sessionStorage.setItem('uma_tailors_admin_auth','1');
-  sessionStorage.setItem('uma_tailors_admin_phone',phone);
-  showAdmin();
-}
-
-function showAdmin(){
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('logoutBtn').style.display='block';
-  renderAll();
-}
-
-function adminLogout(){
-  sessionStorage.removeItem('uma_tailors_admin_auth');
-  sessionStorage.removeItem('uma_tailors_admin_phone');
-  location.reload();
-}
-
-(function(){
-  if(sessionStorage.getItem('uma_tailors_admin_auth')==='1') showAdmin();
-  else document.getElementById('logoutBtn').style.display='none';
-})();
+const AUTH_NUMBERS=['7659951392','6304305587','8008597539'];let currentOTP='';let otpExpiresAt=0;
+function generateOTP(){const phone=document.getElementById('adminPhone').value.replace(/\D/g,'');const err=document.getElementById('loginError');err.textContent='';if(!AUTH_NUMBERS.includes(phone)){err.textContent='This mobile number is not authorized.';document.getElementById('otpBox').classList.remove('show');return}currentOTP=String(Math.floor(100000+Math.random()*900000));otpExpiresAt=Date.now()+5*60*1000;document.getElementById('otpBox').classList.add('show');document.getElementById('demoOtp').textContent='Demo OTP: '+currentOTP+' (expires in 5 minutes)';}
+function verifyOTP(){const phone=document.getElementById('adminPhone').value.replace(/\D/g,'');const otp=document.getElementById('adminOtp').value.trim();const err=document.getElementById('loginError');if(!AUTH_NUMBERS.includes(phone)){err.textContent='This mobile number is not authorized.';return}if(!currentOTP||Date.now()>otpExpiresAt){err.textContent='OTP expired. Generate a new OTP.';return}if(otp!==currentOTP){err.textContent='Incorrect OTP.';return}sessionStorage.setItem('uma_tailors_admin_auth','1');sessionStorage.setItem('uma_tailors_admin_phone',phone);showAdmin();}
+function showAdmin(){document.getElementById('loginScreen').classList.add('hidden');document.getElementById('logoutBtn').style.display='block'}function adminLogout(){sessionStorage.removeItem('uma_tailors_admin_auth');sessionStorage.removeItem('uma_tailors_admin_phone');location.reload()}
+(function(){if(sessionStorage.getItem('uma_tailors_admin_auth')==='1')showAdmin();else document.getElementById('logoutBtn').style.display='none'})();
 </script></body>
 </html>
